@@ -2,6 +2,7 @@ package com.dicoding.picodiploma.mycamera
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
@@ -21,7 +22,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : AppCompatActivity() {
 
@@ -33,6 +36,7 @@ class MainActivity : AppCompatActivity() {
         const val CAMERA_X_RESULT = 200
         private val REQUIRED_PERMISSIONS = arrayOf(android.Manifest.permission.CAMERA)
         private const val REQUEST_CODE_PERMISSIONS = 10
+        private const val MAXIMUM_SIZE = 1000000
     }
 
     override fun onRequestPermissionsResult(
@@ -78,7 +82,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun uploadImage() {
         if (getFile != null) {
-            val file = getFile as File
+            val file = reduceFileImage(getFile as File)
 
             val description = "Ini adalah deskripsi gambar".toRequestBody("text/plain".toMediaType())
             val requestImageFile = file.asRequestBody("image/jpeg".toMediaType())
@@ -188,6 +192,23 @@ class MainActivity : AppCompatActivity() {
                 binding.previewImageView.setImageURI(uri)
             }
         }
+    }
+
+    private fun reduceFileImage(file: File): File {
+        val bitmap = BitmapFactory.decodeFile(file.path)
+        var compressQuality = 10
+        var streamLength: Int
+
+        do {
+            val bitmapStream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, compressQuality, bitmapStream)
+            val bitmapPicByteArray = bitmapStream.toByteArray()
+            streamLength = bitmapPicByteArray.size
+            compressQuality -= 5
+        } while (streamLength > MAXIMUM_SIZE)
+
+        bitmap.compress(Bitmap.CompressFormat.JPEG, compressQuality, FileOutputStream(file))
+        return file
     }
 
 }
